@@ -146,7 +146,10 @@ func (t *filterTransformation) Process(id execute.DatasetID, tbl flux.Table) err
 	// Prepare the function for the column types.
 	cols := tbl.Cols()
 	if err := t.fn.Prepare(cols); err != nil {
-		// TODO(nathanielc): Should we not fail the query for failed compilation?
+		if _, ok := err.(*execute.UnknownColumnError); ok {
+			// if this whole table lacks a referenced column then logically we don't want any of these rows since none of them will match the filter
+			return tbl.Do(func(cr flux.ColReader) error { return nil })
+		}
 		return err
 	}
 
